@@ -23,11 +23,18 @@ def ensure_data_unzipped(repo_root):
 
 def load_auto_mpg(data_dir):
     # handles either auto-mpg.csv or auto-mpg.data
-    csv_path = os.path.join(data_dir, "auto-mpg", "auto-mpg.csv")
+    # Check possible csv paths
+    csv_path = os.path.join(data_dir, "cleaned", "auto-mpg.csv")
+    if not os.path.exists(csv_path):
+        csv_path = os.path.join(data_dir, "auto-mpg", "auto-mpg.csv")
+        
     if os.path.exists(csv_path):
         df = pd.read_csv(csv_path)
     else:
+        # Check possible .data paths
         dat_path = os.path.join(data_dir, "auto-mpg", "auto-mpg.data")
+        if not os.path.exists(dat_path):
+            dat_path = os.path.join(os.path.dirname(data_dir), "data all", "auto+mpg", "auto-mpg.data")
         # parse UCI auto-mpg.data format
         rows = []
         import re

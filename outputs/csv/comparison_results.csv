@@ -1,0 +1,9 @@
+Dataset,Type,RMSE,MAE,R2,Accuracy,Precision,Recall,F1-Score
+Auto-MPG,regression,3.5034,2.7147,0.7717,,,,
+Energy Efficiency (ENB2012),regression,5.5405,4.3660,0.7055,,,,
+Concrete Compressive Strength,regression,14.7675,12.0325,0.1537,,,,
+Real Estate Valuation,regression,10.8466,8.9987,0.2987,,,,
+Breast Cancer Wisconsin,classification,,,,0.9286,1.0000,0.7778,0.8750
+Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+Data Banknote Authentication,classification,,,,0.5418,1.0000,0.0079,0.0156
+Tic-Tac-Toe Endgame,classification,,,,0.6615,0.6579,1.0000,0.7937

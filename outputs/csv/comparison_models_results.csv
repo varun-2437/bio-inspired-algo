@@ -1,0 +1,73 @@
+Model,Dataset,Type,RMSE,MAE,R2,Accuracy,Precision,Recall,F1-Score
+SBOA,Auto-MPG,regression,3.0552,2.2415,0.8264,,,,
+SBOA,Energy Efficiency (ENB2012),regression,5.4413,4.4181,0.7159,,,,
+SBOA,Concrete Compressive Strength,regression,12.9406,10.7598,0.3501,,,,
+SBOA,Real Estate Valuation,regression,8.8822,7.0800,0.5297,,,,
+SBOA,Breast Cancer Wisconsin,classification,,,,0.9500,0.9524,0.8889,0.9195
+SBOA,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+SBOA,Data Banknote Authentication,classification,,,,0.7236,1.0000,0.4016,0.5730
+SBOA,Tic-Tac-Toe Endgame,classification,,,,0.6979,0.6914,0.9680,0.8067
+ABC,Auto-MPG,regression,4.5210,3.7913,0.6198,,,,
+ABC,Energy Efficiency (ENB2012),regression,6.3385,5.1652,0.6145,,,,
+ABC,Concrete Compressive Strength,regression,13.7338,11.2685,0.2680,,,,
+ABC,Real Estate Valuation,regression,10.2225,8.6656,0.3771,,,,
+ABC,Breast Cancer Wisconsin,classification,,,,0.9071,0.9706,0.7333,0.8354
+ABC,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+ABC,Data Banknote Authentication,classification,,,,0.6291,0.8788,0.2283,0.3625
+ABC,Tic-Tac-Toe Endgame,classification,,,,0.6771,0.6780,0.9600,0.7947
+GTO,Auto-MPG,regression,3.1101,2.2962,0.8201,,,,
+GTO,Energy Efficiency (ENB2012),regression,4.6450,3.6767,0.7930,,,,
+GTO,Concrete Compressive Strength,regression,12.0909,9.9529,0.4327,,,,
+GTO,Real Estate Valuation,regression,8.3051,6.4565,0.5888,,,,
+GTO,Breast Cancer Wisconsin,classification,,,,0.9714,0.9556,0.9556,0.9556
+GTO,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+GTO,Data Banknote Authentication,classification,,,,0.6509,1.0000,0.2441,0.3924
+GTO,Tic-Tac-Toe Endgame,classification,,,,0.7344,0.7256,0.9520,0.8235
+GWO,Auto-MPG,regression,4.3124,3.5070,0.6541,,,,
+GWO,Energy Efficiency (ENB2012),regression,6.7337,5.4528,0.5650,,,,
+GWO,Concrete Compressive Strength,regression,13.7122,11.1995,0.2703,,,,
+GWO,Real Estate Valuation,regression,9.5546,8.0713,0.4558,,,,
+GWO,Breast Cancer Wisconsin,classification,,,,0.9429,0.9744,0.8444,0.9048
+GWO,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+GWO,Data Banknote Authentication,classification,,,,0.5600,1.0000,0.0472,0.0902
+GWO,Tic-Tac-Toe Endgame,classification,,,,0.6510,0.6510,1.0000,0.7886
+MFO,Auto-MPG,regression,4.3437,3.4736,0.6491,,,,
+MFO,Energy Efficiency (ENB2012),regression,6.8889,5.5922,0.5447,,,,
+MFO,Concrete Compressive Strength,regression,14.2053,11.4338,0.2169,,,,
+MFO,Real Estate Valuation,regression,8.1565,6.2746,0.6034,,,,
+MFO,Breast Cancer Wisconsin,classification,,,,0.8643,0.9333,0.6222,0.7467
+MFO,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+MFO,Data Banknote Authentication,classification,,,,0.7673,0.8182,0.6378,0.7168
+MFO,Tic-Tac-Toe Endgame,classification,,,,0.6510,0.6510,1.0000,0.7886
+PSO,Auto-MPG,regression,4.2124,3.2707,0.6700,,,,
+PSO,Energy Efficiency (ENB2012),regression,6.2831,5.1453,0.6213,,,,
+PSO,Concrete Compressive Strength,regression,14.1358,11.5761,0.2245,,,,
+PSO,Real Estate Valuation,regression,9.8009,8.3039,0.4274,,,,
+PSO,Breast Cancer Wisconsin,classification,,,,0.9643,0.9545,0.9333,0.9438
+PSO,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+PSO,Data Banknote Authentication,classification,,,,0.6400,0.9375,0.2362,0.3774
+PSO,Tic-Tac-Toe Endgame,classification,,,,0.6615,0.6579,1.0000,0.7937
+SSA,Auto-MPG,regression,5.0156,3.9719,0.5321,,,,
+SSA,Energy Efficiency (ENB2012),regression,7.3482,5.9955,0.4820,,,,
+SSA,Concrete Compressive Strength,regression,13.7303,11.2672,0.2684,,,,
+SSA,Real Estate Valuation,regression,10.8359,9.0618,0.3001,,,,
+SSA,Breast Cancer Wisconsin,classification,,,,0.8929,0.9688,0.6889,0.8052
+SSA,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+SSA,Data Banknote Authentication,classification,,,,0.5927,1.0000,0.1181,0.2113
+SSA,Tic-Tac-Toe Endgame,classification,,,,0.6771,0.6740,0.9760,0.7974
+WOA,Auto-MPG,regression,5.9968,4.8302,0.3312,,,,
+WOA,Energy Efficiency (ENB2012),regression,7.0219,5.8863,0.5269,,,,
+WOA,Concrete Compressive Strength,regression,15.1926,12.3162,0.1043,,,,
+WOA,Real Estate Valuation,regression,11.2015,9.6063,0.2521,,,,
+WOA,Breast Cancer Wisconsin,classification,,,,0.7643,1.0000,0.2667,0.4211
+WOA,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+WOA,Data Banknote Authentication,classification,,,,0.5600,1.0000,0.0472,0.0902
+WOA,Tic-Tac-Toe Endgame,classification,,,,0.6719,0.6649,1.0000,0.7987
+ZOA,Auto-MPG,regression,5.5318,4.4347,0.4309,,,,
+ZOA,Energy Efficiency (ENB2012),regression,8.1064,6.9091,0.3695,,,,
+ZOA,Concrete Compressive Strength,regression,14.4610,11.7917,0.1885,,,,
+ZOA,Real Estate Valuation,regression,11.9749,10.0468,0.1452,,,,
+ZOA,Breast Cancer Wisconsin,classification,,,,0.8143,1.0000,0.4222,0.5938
+ZOA,Blood Transfusion,classification,,,,0.7533,0.0000,0.0000,0.0000
+ZOA,Data Banknote Authentication,classification,,,,0.5382,0.0000,0.0000,0.0000
+ZOA,Tic-Tac-Toe Endgame,classification,,,,0.6510,0.6510,1.0000,0.7886

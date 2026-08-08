@@ -1,0 +1,192 @@
+R-orig.txt
+
+Purpose
+-------
+This file contains step-by-step instructions to run the original R scripts (the R implementation of the Secretary Bird Optimization Algorithm (SBOA) for MLP training) on a Mac (macOS) with Anaconda installed. It covers creating a reproducible conda environment with R, installing required system and R packages, and running the R scripts to produce outputs.
+
+Assumptions
+-----------
+- You are on macOS (MacBook) and have Anaconda/Miniconda installed and on your PATH.
+- You have cloned this repository (varun-2437/bio-inspired-algo) to a local folder and placed the original R scripts and the datasets under the repo (for example, under the `data/` folder). If the original R scripts are in a separate repository, clone that repo or copy the R files into this repo.
+- This is a general guide: the original R scripts may reference particular package names or custom helper R files (hd.R, no.R). If a script fails because of a missing package or helper, install the missing package or source the missing R file as indicated by the error.
+
+High-level steps
+----------------
+1. Create and activate a conda environment with R installed.
+2. Install macOS system prerequisites (Xcode command-line tools, Java if needed for some packages).
+3. Install required R packages (via conda packages or install.packages in R).
+4. Run the original R scripts using Rscript, capture logs, and inspect outputs.
+
+Detailed commands
+-----------------
+Open Terminal and run the commands below. Replace `~/path/to/repo` with the actual path where you cloned the repository.
+
+Step 0 — (Optional) update conda
+--------------------------------
+# update conda base
+conda update -n base -c defaults conda -y
+
+Step 1 — Create a reproducible conda environment with R
+------------------------------------------------------
+# Create a new conda environment named 'sboa-r' with a recent R version
+conda create -n sboa-r r-base=4.2.2 r-essentials -y
+
+# Activate the environment
+conda activate sboa-r
+
+Notes:
+- `r-essentials` installs many commonly-used R packages and the R language itself, and gives you R and Rscript on PATH inside the environment.
+- If you prefer a newer R, change r-base=... to the version you want (e.g., 4.3.x) but ensure compatibility with packages.
+
+Step 2 — Install macOS system prerequisites
+-------------------------------------------
+# Install Xcode command-line tools (needed to compile some R packages)
+# You will be prompted by macOS GUI — accept and install.
+xcode-select --install
+
+# (Optional) Install Homebrew if you don't have it (skip if you already have brew):
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# If you will use packages that need Java (e.g., 'xlsx' uses rJava), install a JDK:
+# Using AdoptOpenJDK (Temurin) via brew cask (modern macOS):
+brew install --cask temurin
+
+Notes:
+- If you skip Java and later an R package requires rJava, the install will fail; install JDK and retry.
+- For .xls/.xlsx reading we prefer the readxl or openxlsx packages which do not require Java.
+
+Step 3 — Install required R packages
+------------------------------------
+You have two options: install R packages from CRAN inside R, or install conda-packaged R packages (names prefixed by r-).
+
+Option A — Install R packages from within R (recommended for latest CRAN versions):
+# Start R inside the activated conda env
+R
+
+# Inside the R REPL, run (copy-paste these lines). This installs the typical packages needed by the R scripts.
+install.packages(c(
+  "readxl",    # read .xls/.xlsx
+  "openxlsx",  # read/write Excel files without Java
+  "ggplot2",   # plotting
+  "MASS",      # statistical functions
+  "pracma",    # practical numerical functions
+  "xlsx",      # Excel read/write via Java (optional)
+  "caret",     # ML utilities (optional)
+  "data.table",
+  "dplyr",
+  "tidyr",
+  "purrr",
+  "magrittr"
+), repos = "https://cloud.r-project.org")
+
+# If you need additional packages referenced in the R scripts, install them similarly:
+# install.packages("package_name")
+
+# Quit R when finished
+quit()
+
+Notes about xlsx/rJava:
+- If `install.packages("xlsx")` fails related to rJava, install a JDK (see Step 2) and then set JAVA_HOME before starting R, for example:
+export JAVA_HOME=$(/usr/libexec/java_home)
+# then start R and try install.packages("rJava") and install.packages("xlsx") again.
+
+Option B — Install many R packages via conda (works well if you prefer conda-managed packages):
+conda install -n sboa-r -c conda-forge \
+  r-readxl r-openxlsx r-ggplot2 r-mass r-pracma r-xlsx r-caret r-data.table r-dplyr r-tidyr r-purrr -y
+
+Notes:
+- Using conda-forge channel provides prebuilt binary R packages and avoids local compilation. However packages may be older than CRAN.
+
+Step 4 — Prepare your repository and datasets
+---------------------------------------------
+# go to your repository root (where you cloned this repo)
+cd ~/path/to/repo/bio-inspired-algo
+
+# check contents
+ls -la
+
+# Make sure your datasets are available under ./data/ or in the paths the R scripts expect.
+# If you uploaded data.zip to the repo and prefer to unzip locally:
+unzip -o data.zip -d data
+
+# Verify the expected dataset files are present, e.g.:
+ls -la data
+
+Step 5 — Locate the original R scripts
+--------------------------------------
+Identify the main R file(s) in the repo that run the experiments. Common names (from the original repository) might be:
+- ANN.R
+- SecretaryBird_ANN.R
+- run_experiments.R
+
+If you're not sure, list R files:
+ls -la *.R */*.R
+
+Step 6 — Run the R scripts (example commands)
+---------------------------------------------
+# Example: run a single R script using Rscript (non-interactive). Replace the filename with the real R entry-point.
+Rscript --vanilla path/to/SecretaryBird_ANN.R 2>&1 | tee logs/SecretaryBird_ANN.log
+
+# Example: run a driver script that loops over datasets or hyperparameters (if it exists):
+Rscript --vanilla run_all_experiments.R 2>&1 | tee logs/run_all_experiments.log
+
+Notes:
+- `--vanilla` starts R without saved workspace or site files and is recommended for reproducible runs.
+- `tee` captures console output into logs/ for later inspection.
+
+Step 7 — If the R script uses relative paths, ensure working directory is correct
+-------------------------------------------------------------------------------
+Some R scripts assume they are run from a particular working directory. If a script does `source('utils/hd.R')` or `readxl::read_xls('data/Concrete_Data.xls')`, run Rscript from the repository root where data/ is a relative path:
+cd ~/path/to/repo/bio-inspired-algo
+Rscript --vanilla path/to/the_script.R
+
+Step 8 — Inspect outputs
+------------------------
+After the script completes, check the outputs directory used by the R scripts (often ./outputs/, ./results/, ./figures/). Example commands:
+ls -la outputs || true
+ls -la results || true
+
+# View the log file (if you piped output to logs/):
+less logs/SecretaryBird_ANN.log
+
+# Open a plot (PDF/PNG) produced by the script with Preview.app (macOS):
+open outputs/plots/some_plot.png
+
+Step 9 — Common troubleshooting
+------------------------------
+- Missing R package errors: install the package via install.packages('name') inside R or conda install -n sboa-r r-name.
+- Java / rJava errors: ensure you installed a JDK (Step 2) and set JAVA_HOME before starting R. Example:
+export JAVA_HOME=$(/usr/libexec/java_home)
+R
+# inside R: install.packages('rJava')
+
+- Compilers missing errors: install Xcode command-line tools (xcode-select --install) and, if needed, gfortran from Homebrew or official binary distributions.
+- File path errors: make sure the script's working directory is the repository root if the script uses relative paths to data/.
+
+Step 10 — Reproducing exact R hyperparameters from the paper
+------------------------------------------------------------
+- If you intend to run the full experiments to match the R paper, check the R scripts for parameter values like SearchAgents (population size), Max_iterations, and hidden layer sizes. Edit the R script or a configuration file they use to set these values accordingly.
+- Typical R setting example (change inside the R script before running):
+SearchAgents <- 200
+Max_iteration <- 250
+hidden_neurons <- 10  # per-dataset value from paper
+
+Step 11 — Automating runs (optional)
+-------------------------------------
+You can create a small shell script to run experiments for multiple datasets and capture outputs, e.g. run_all.sh:
+#!/usr/bin/env bash
+set -euo pipefail
+conda activate sboa-r
+mkdir -p logs
+Rscript --vanilla path/to/SecretaryBird_ANN.R 2>&1 | tee logs/SecretaryBird_ANN.log
+
+Make it executable and run:
+chmod +x run_all.sh
+./run_all.sh
+
+Final notes
+-----------
+- If you want, I can: (a) prepare a ready-to-run shell script that launches the R experiments with dataset-specific hyperparameters and collects outputs, or (b) run the R scripts in a CI or cloud environment and commit results. Tell me which you prefer.
+- If any particular R package is required by the original scripts but missing from this list, run the script once, capture the missing package error, and install the package via install.packages("name") inside the conda R environment.
+
+---
