@@ -1,12 +1,13 @@
 import numpy as np
+import math
 from mlp_sboa.fitness import fitness_function
 
 
 def levy_flight(dimension):
     # simple levy step generator
     beta = 1.5
-    sigma = (np.math.gamma(1 + beta) * np.sin(np.pi * beta / 2) /
-             (np.math.gamma((1 + beta) / 2) * beta * 2 ** ((beta - 1) / 2))) ** (1 / beta)
+    sigma = (math.gamma(1 + beta) * np.sin(np.pi * beta / 2) /
+             (math.gamma((1 + beta) / 2) * beta * 2 ** ((beta - 1) / 2))) ** (1 / beta)
     u = np.random.normal(0, sigma, size=dimension)
     v = np.random.normal(0, 1, size=dimension)
     step = u / (np.abs(v) ** (1 / beta))
