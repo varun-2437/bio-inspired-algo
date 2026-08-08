@@ -130,5 +130,248 @@ def SBOA_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
     weights = {"W1": W1, "W2": W2}
     biases = {"b1": b1, "b2": b2}
 
-    return {"weights": weights, "biases": biases, "sboa_curve": result["SBOA_curve"],
+    return {"weights": weights, "biases": biases, "curve": result["SBOA_curve"], "sboa_curve": result["SBOA_curve"],
             "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+def ABC(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness,
+        abandonment_limit_param=0.6, a=1):
+    """Artificial Bee Colony (ABC) optimizer for MLP."""
+    L = int(round(abandonment_limit_param * dimension * SearchAgents))
+    
+    pop_position = [np.random.uniform(lowerbound, upperbound, size=dimension) for _ in range(SearchAgents)]
+    pop_cost = [fitness(pos, X_train, Y_train, input_dim, hidden_dim, output_dim) for pos in pop_position]
+    
+    best_sol_pos = pop_position[0].copy()
+    best_sol_cost = pop_cost[0]
+    for i in range(SearchAgents):
+        if pop_cost[i] <= best_sol_cost:
+            best_sol_pos = pop_position[i].copy()
+            best_sol_cost = pop_cost[i]
+            
+    C = np.zeros(SearchAgents, dtype=int)
+    best_cost = np.zeros(Max_iterations)
+    
+    for it in range(Max_iterations):
+        # Employed Bees
+        for i in range(SearchAgents):
+            k_choices = [idx for idx in range(SearchAgents) if idx != i]
+            k = np.random.choice(k_choices)
+            phi = a * np.random.uniform(-1, 1, size=dimension)
+            new_pos = pop_position[i] + phi * (pop_position[i] - pop_position[k])
+            new_pos = np.clip(new_pos, lowerbound, upperbound)
+            new_cost = fitness(new_pos, X_train, Y_train, input_dim, hidden_dim, output_dim)
+            if new_cost <= pop_cost[i]:
+                pop_position[i] = new_pos
+                pop_cost[i] = new_cost
+            else:
+                C[i] += 1
+                
+        # Onlooker Bees
+        mean_cost = np.mean(pop_cost)
+        fit_vals = np.exp(-np.array(pop_cost) / (mean_cost + 1e-12))
+        probs = fit_vals / np.sum(fit_vals)
+        cum_probs = np.cumsum(probs)
+        
+        for m in range(SearchAgents):
+            r = np.random.rand()
+            i = int(np.searchsorted(cum_probs, r))
+            if i >= SearchAgents:
+                i = SearchAgents - 1
+            k_choices = [idx for idx in range(SearchAgents) if idx != i]
+            k = np.random.choice(k_choices)
+            phi = a * np.random.uniform(-1, 1, size=dimension)
+            new_pos = pop_position[i] + phi * (pop_position[i] - pop_position[k])
+            new_pos = np.clip(new_pos, lowerbound, upperbound)
+            new_cost = fitness(new_pos, X_train, Y_train, input_dim, hidden_dim, output_dim)
+            if new_cost <= pop_cost[i]:
+                pop_position[i] = new_pos
+                pop_cost[i] = new_cost
+            else:
+                C[i] += 1
+                
+        # Scout Bees
+        for i in range(SearchAgents):
+            if C[i] >= L:
+                pop_position[i] = np.random.uniform(lowerbound, upperbound, size=dimension)
+                pop_cost[i] = fitness(pop_position[i], X_train, Y_train, input_dim, hidden_dim, output_dim)
+                C[i] = 0
+                
+        # Update Best Solution
+        for i in range(SearchAgents):
+            if pop_cost[i] <= best_sol_cost:
+                best_sol_pos = pop_position[i].copy()
+                best_sol_cost = pop_cost[i]
+                
+        best_cost[it] = best_sol_cost
+        print(f"Iteration {it+1}: Best Cost = {best_cost[it]:.6f}")
+        
+    return {"Best_pos": best_sol_pos, "Best_score": best_sol_cost, "curve": best_cost}
+
+
+def ABC_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = ABC(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+def GTO(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness):
+    """Gorilla Troops Optimizer (GTO) for MLP."""
+    Silverback = np.zeros(dimension)
+    Silverback_Score = float("inf")
+    
+    X = np.random.uniform(lowerbound, upperbound, size=(SearchAgents, dimension))
+    convergence_curve = np.zeros(Max_iterations)
+    Pop_Fit = np.zeros(SearchAgents)
+    
+    for i in range(SearchAgents):
+        Pop_Fit[i] = fitness(X[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+        if Pop_Fit[i] < Silverback_Score:
+            Silverback_Score = Pop_Fit[i]
+            Silverback = X[i, :].copy()
+            
+    GX = X.copy()
+    lb = np.full(dimension, lowerbound)
+    ub = np.full(dimension, upperbound)
+    
+    p = 0.03
+    Beta = 3
+    w = 0.8
+    
+    for It in range(1, Max_iterations + 1):
+        a = (np.cos(2 * np.random.rand()) + 1) * (1 - It / Max_iterations)
+        C = a * (2 * np.random.rand() - 1)
+        
+        # Exploration
+        for i in range(SearchAgents):
+            if np.random.rand() < p:
+                GX[i, :] = (ub - lb) * np.random.rand(dimension) + lb
+            else:
+                if np.random.rand() >= 0.5:
+                    Z = np.random.uniform(-a, a, size=dimension)
+                    H = Z * X[i, :]
+                    rand_idx = np.random.randint(0, SearchAgents)
+                    GX[i, :] = (np.random.rand() - a) * X[rand_idx, :] + C * H
+                else:
+                    rand_idx1 = np.random.randint(0, SearchAgents)
+                    rand_idx2 = np.random.randint(0, SearchAgents)
+                    GX[i, :] = X[i, :] - C * (C * (X[i, :] - GX[rand_idx1, :]) + np.random.rand() * (X[i, :] - GX[rand_idx2, :]))
+                    
+        GX = np.clip(GX, lowerbound, upperbound)
+        
+        # Group formation
+        for i in range(SearchAgents):
+            New_Fit = fitness(GX[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+            if New_Fit < Pop_Fit[i]:
+                Pop_Fit[i] = New_Fit
+                X[i, :] = GX[i, :].copy()
+            if New_Fit < Silverback_Score:
+                Silverback_Score = New_Fit
+                Silverback = GX[i, :].copy()
+                
+        # Exploitation
+        for i in range(SearchAgents):
+            if a >= w:
+                g = 2 ** C
+                col_means = np.mean(GX, axis=0)
+                delta = (np.abs(col_means) ** g) ** (1 / g)
+                GX[i, :] = C * delta * (X[i, :] - Silverback) + X[i, :]
+            else:
+                if np.random.rand() >= 0.5:
+                    h = np.random.randn(dimension)
+                else:
+                    h = np.random.randn()
+                r1 = np.random.rand()
+                GX[i, :] = Silverback - (Silverback * (2 * r1 - 1) - X[i, :] * (2 * r1 - 1)) * (Beta * h)
+                
+        GX = np.clip(GX, lowerbound, upperbound)
+        
+        # Group formation
+        for i in range(SearchAgents):
+            New_Fit = fitness(GX[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+            if New_Fit < Pop_Fit[i]:
+                Pop_Fit[i] = New_Fit
+                X[i, :] = GX[i, :].copy()
+            if New_Fit < Silverback_Score:
+                Silverback_Score = New_Fit
+                Silverback = GX[i, :].copy()
+                
+        convergence_curve[It - 1] = Silverback_Score
+        print(f"Iteration {It}: Best Cost = {convergence_curve[It-1]:.6f}")
+        
+    return {"Best_pos": Silverback, "Best_score": Silverback_Score, "curve": convergence_curve}
+
+
+def GTO_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = GTO(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
