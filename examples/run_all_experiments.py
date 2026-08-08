@@ -1,10 +1,14 @@
 import os
+import sys
 import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# Add parent directory to sys.path so mlp_sboa is always found
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from mlp_sboa.optimizers import (
     SBOA_nn, ABC_nn, GTO_nn, GWO_nn, MFO_nn, PSO_nn, SSA_nn, WOA_nn, ZOA_nn
