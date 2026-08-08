@@ -576,3 +576,376 @@ def MFO_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
             "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
 
 
+def PSO(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness,
+        w=1.0, wdamp=0.99, c1=1.5, c2=2.0):
+    """Particle Swarm Optimization (PSO) for MLP."""
+    vel_max = 0.1 * (upperbound - lowerbound)
+    vel_min = -upperbound
+
+    positions = [np.random.uniform(lowerbound, upperbound, size=dimension) for _ in range(SearchAgents)]
+    velocities = [np.zeros(dimension) for _ in range(SearchAgents)]
+    costs = [float("inf")] * SearchAgents
+    pbest_positions = [pos.copy() for pos in positions]
+    pbest_costs = [float("inf")] * SearchAgents
+
+    gbest_position = None
+    gbest_cost = float("inf")
+
+    for i in range(SearchAgents):
+        c = fitness(positions[i], X_train, Y_train, input_dim, hidden_dim, output_dim)
+        costs[i] = c
+        pbest_positions[i] = positions[i].copy()
+        pbest_costs[i] = c
+        if c < gbest_cost:
+            gbest_cost = c
+            gbest_position = positions[i].copy()
+
+    best_cost_history = np.zeros(Max_iterations)
+
+    for it in range(Max_iterations):
+        for i in range(SearchAgents):
+            r1 = np.random.rand(dimension)
+            r2 = np.random.rand(dimension)
+            velocities[i] = (w * velocities[i] +
+                             c1 * r1 * (pbest_positions[i] - positions[i]) +
+                             c2 * r2 * (gbest_position - positions[i]))
+            velocities[i] = np.clip(velocities[i], vel_min, vel_max)
+
+            positions[i] = positions[i] + velocities[i]
+
+            is_outside = (positions[i] < lowerbound) | (positions[i] > upperbound)
+            velocities[i][is_outside] = -velocities[i][is_outside]
+
+            positions[i] = np.clip(positions[i], lowerbound, upperbound)
+
+            c = fitness(positions[i], X_train, Y_train, input_dim, hidden_dim, output_dim)
+            costs[i] = c
+
+            if c < pbest_costs[i]:
+                pbest_positions[i] = positions[i].copy()
+                pbest_costs[i] = c
+                if c < gbest_cost:
+                    gbest_cost = c
+                    gbest_position = positions[i].copy()
+
+        best_cost_history[it] = gbest_cost
+        print(f"Iteration {it+1}: Best Cost = {best_cost_history[it]:.6f}")
+        w *= wdamp
+
+    return {"Best_pos": gbest_position, "Best_score": gbest_cost, "curve": best_cost_history}
+
+
+def PSO_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = PSO(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+def SSA(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness):
+    """Salp Swarm Algorithm (SSA) for MLP."""
+    lb = np.full(dimension, lowerbound)
+    ub = np.full(dimension, upperbound)
+
+    SalpPositions = np.random.uniform(lowerbound, upperbound, size=(SearchAgents, dimension))
+    SalpFitness = np.zeros(SearchAgents)
+
+    for i in range(SearchAgents):
+        SalpFitness[i] = fitness(SalpPositions[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+
+    sorted_idx = np.argsort(SalpFitness)
+    FoodPosition = SalpPositions[sorted_idx[0], :].copy()
+    FoodFitness = SalpFitness[sorted_idx[0]]
+
+    Convergence_curve = np.zeros(Max_iterations)
+
+    for l in range(1, Max_iterations + 1):
+        c1 = 2.0 * np.exp(-((4.0 * l / Max_iterations) ** 2))
+
+        for i in range(SearchAgents):
+            if i < SearchAgents / 2:
+                for j in range(dimension):
+                    c2 = np.random.rand()
+                    c3 = np.random.rand()
+                    if c3 < 0.5:
+                        SalpPositions[i, j] = FoodPosition[j] + c1 * ((ub[j] - lb[j]) * c2 + lb[j])
+                    else:
+                        SalpPositions[i, j] = FoodPosition[j] - c1 * ((ub[j] - lb[j]) * c2 + lb[j])
+            else:
+                point1 = SalpPositions[i - 1, :]
+                point2 = SalpPositions[i, :]
+                SalpPositions[i, :] = (point2 + point1) / 2.0
+
+        for i in range(SearchAgents):
+            SalpPositions[i, :] = np.clip(SalpPositions[i, :], lowerbound, upperbound)
+            fit = fitness(SalpPositions[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+
+            if fit < FoodFitness:
+                FoodFitness = fit
+                FoodPosition = SalpPositions[i, :].copy()
+
+        Convergence_curve[l - 1] = FoodFitness
+        print(f"Iteration {l}: Best Cost = {Convergence_curve[l - 1]:.6f}")
+
+    return {"Best_pos": FoodPosition, "Best_score": FoodFitness, "curve": Convergence_curve}
+
+
+def SSA_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = SSA(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+def WOA(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness):
+    """Whale Optimization Algorithm (WOA) for MLP."""
+    Leader_pos = np.zeros(dimension)
+    Leader_score = float("inf")
+
+    Positions = np.random.uniform(lowerbound, upperbound, size=(SearchAgents, dimension))
+    Convergence_curve = np.zeros(Max_iterations)
+
+    for t in range(Max_iterations):
+        for i in range(SearchAgents):
+            Positions[i, :] = np.clip(Positions[i, :], lowerbound, upperbound)
+            fit = fitness(Positions[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+
+            if fit < Leader_score:
+                Leader_score = fit
+                Leader_pos = Positions[i, :].copy()
+
+        a = 2.0 - t * (2.0 / Max_iterations)
+        a2 = -1.0 + t * (-1.0 / Max_iterations)
+
+        for i in range(SearchAgents):
+            r1 = np.random.rand()
+            r2 = np.random.rand()
+            A = 2.0 * a * r1 - a
+            C = 2.0 * r2
+            b = 1.0
+            l = (a2 - 1.0) * np.random.rand() + 1.0
+            p = np.random.rand()
+
+            for j in range(dimension):
+                if p < 0.5:
+                    if abs(A) >= 1.0:
+                        rand_leader_idx = np.random.randint(0, SearchAgents)
+                        X_rand = Positions[rand_leader_idx, :]
+                        D_X_rand = abs(C * X_rand[j] - Positions[i, j])
+                        Positions[i, j] = X_rand[j] - A * D_X_rand
+                    else:
+                        D_Leader = abs(C * Leader_pos[j] - Positions[i, j])
+                        Positions[i, j] = Leader_pos[j] - A * D_Leader
+                else:
+                    distance2Leader = abs(Leader_pos[j] - Positions[i, j])
+                    Positions[i, j] = distance2Leader * np.exp(b * l) * np.cos(l * 2.0 * np.pi) + Leader_pos[j]
+
+        Convergence_curve[t] = Leader_score
+        print(f"Iteration {t+1}: Best Cost = {Convergence_curve[t]:.6f}")
+
+    return {"Best_pos": Leader_pos, "Best_score": Leader_score, "curve": Convergence_curve}
+
+
+def WOA_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = WOA(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+def ZOA(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness):
+    """Zebra Optimization Algorithm (ZOA) for MLP."""
+    X = np.random.uniform(lowerbound, upperbound, size=(SearchAgents, dimension))
+    fit = np.zeros(SearchAgents)
+
+    for i in range(SearchAgents):
+        fit[i] = fitness(X[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+
+    best_so_far = np.zeros(Max_iterations)
+    PZ = X[np.argmin(fit), :].copy()
+    fbest = np.min(fit)
+
+    for t in range(1, Max_iterations + 1):
+        best = np.min(fit)
+        location = np.argmin(fit)
+        if best < fbest:
+            fbest = best
+            PZ = X[location, :].copy()
+
+        # Phase 1: Foraging
+        for i in range(SearchAgents):
+            I = int(round(1 + np.random.rand()))
+            X_newP1 = X[i, :] + np.random.rand(dimension) * (PZ - I * X[i, :])
+            X_newP1 = np.clip(X_newP1, lowerbound, upperbound)
+
+            f_newP1 = fitness(X_newP1, X_train, Y_train, input_dim, hidden_dim, output_dim)
+            if f_newP1 <= fit[i]:
+                X[i, :] = X_newP1.copy()
+                fit[i] = f_newP1
+
+        # Phase 2: Defense
+        Ps = np.random.rand()
+        k = np.random.randint(0, SearchAgents)
+        AZ = X[k, :].copy()
+
+        for i in range(SearchAgents):
+            if Ps < 0.5:
+                R = 0.1
+                X_newP2 = X[i, :] + R * (2.0 * np.random.rand(dimension) - 1.0) * (1.0 - t / Max_iterations) * X[i, :]
+            else:
+                I = int(round(1 + np.random.rand()))
+                X_newP2 = X[i, :] + np.random.rand(dimension) * (AZ - I * X[i, :])
+
+            X_newP2 = np.clip(X_newP2, lowerbound, upperbound)
+            f_newP2 = fitness(X_newP2, X_train, Y_train, input_dim, hidden_dim, output_dim)
+            if f_newP2 <= fit[i]:
+                X[i, :] = X_newP2.copy()
+                fit[i] = f_newP2
+
+        best_so_far[t - 1] = fbest
+        print(f"Iteration {t}: Best Cost = {best_so_far[t - 1]:.6f}")
+
+    return {"Best_pos": PZ, "Best_score": fbest, "curve": best_so_far}
+
+
+def ZOA_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = ZOA(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+
+
