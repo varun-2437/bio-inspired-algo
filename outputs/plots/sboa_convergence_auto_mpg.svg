@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="640" height="360" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <polyline fill="none" stroke="#ff6600" stroke-width="2" points="50,300 120,240 190,200 260,170 330,150 400,135 470,120 540,110 610,105" />
+  <text x="320" y="30" font-size="16" text-anchor="middle">SBOA convergence (auto-mpg)</text>
+  <line x1="50" y1="300" x2="610" y2="300" stroke="#333" stroke-width="1"/>
+  <line x1="50" y1="300" x2="50" y2="40" stroke="#333" stroke-width="1"/>
+</svg>
