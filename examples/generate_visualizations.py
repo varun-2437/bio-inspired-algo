@@ -66,20 +66,44 @@ def load_auto_mpg():
 
 # ─── 1. MLP Architecture with Real Weights ───
 def draw_mlp_real(W1, b1, W2, b2, feature_names, target_name):
-    """Draw MLP network diagram with real weight values on connections."""
+    """Draw a professional MLP network diagram with real weight values."""
     input_dim = W1.shape[0]   # 7
     hidden_dim = W1.shape[1]  # 8
     output_dim = W2.shape[1]  # 1
 
-    fig, ax = plt.subplots(figsize=(18, 12))
-    ax.axis("off")
+    fig, ax = plt.subplots(figsize=(20, 13))
 
-    x_in, x_hid, x_out = 1.5, 5.0, 8.5
-    
-    # vertical positions (centered)
-    y_inputs = np.linspace(0.5, input_dim * 1.2, input_dim)
-    y_hiddens = np.linspace(0.5, hidden_dim * 1.0, hidden_dim)
+    # ── Professional background and grid ──
+    fig.patch.set_facecolor("#FAFBFD")
+    ax.set_facecolor("#F5F7FA")
+    ax.grid(True, which="both", color="#E0E4EA", linewidth=0.5, alpha=0.7, linestyle="-")
+    ax.set_axisbelow(True)
+    # Remove ticks but keep the grid
+    ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    x_in, x_hid, x_out = 2.0, 5.5, 9.0
+
+    # vertical positions (centered, better spacing)
+    y_inputs = np.linspace(1.0, input_dim * 1.3 + 0.5, input_dim)
+    y_hiddens = np.linspace(0.5, hidden_dim * 1.15 + 0.3, hidden_dim)
     y_outputs = [np.mean(y_hiddens)]
+
+    # ── Layer background panels ──
+    panel_alpha = 0.12
+    # Input panel
+    in_panel = patches.FancyBboxPatch((x_in - 0.7, min(y_inputs) - 0.7), 1.4, max(y_inputs) - min(y_inputs) + 1.4,
+        boxstyle="round,pad=0.15", facecolor="#1565C0", alpha=panel_alpha, edgecolor="#1565C0", lw=1.5, linestyle="--", zorder=0)
+    ax.add_patch(in_panel)
+    # Hidden panel
+    hid_panel = patches.FancyBboxPatch((x_hid - 0.7, min(y_hiddens) - 0.7), 1.4, max(y_hiddens) - min(y_hiddens) + 1.4,
+        boxstyle="round,pad=0.15", facecolor="#2E7D32", alpha=panel_alpha, edgecolor="#2E7D32", lw=1.5, linestyle="--", zorder=0)
+    ax.add_patch(hid_panel)
+    # Output panel
+    out_panel = patches.FancyBboxPatch((x_out - 0.7, y_outputs[0] - 0.7), 1.4, 1.4,
+        boxstyle="round,pad=0.15", facecolor="#C62828", alpha=panel_alpha, edgecolor="#C62828", lw=1.5, linestyle="--", zorder=0)
+    ax.add_patch(out_panel)
 
     # Normalize weight magnitudes for coloring
     all_w1 = np.abs(W1).flatten()
@@ -87,69 +111,111 @@ def draw_mlp_real(W1, b1, W2, b2, feature_names, target_name):
     w1_max = max(all_w1.max(), 0.01)
     w2_max = max(all_w2.max(), 0.01)
 
-    # Draw W1 connections
+    # ── Draw W1 connections (curved) ──
     for i in range(input_dim):
         for j in range(hidden_dim):
             w_val = W1[i, j]
             intensity = min(abs(w_val) / w1_max, 1.0)
-            color = (0.8, 0.2, 0.2, 0.15 + 0.7 * intensity) if w_val < 0 else (0.2, 0.2, 0.8, 0.15 + 0.7 * intensity)
-            lw = 0.5 + 2.5 * intensity
-            ax.plot([x_in, x_hid], [y_inputs[i], y_hiddens[j]], color=color, linewidth=lw, zorder=1)
+            if w_val < 0:
+                color = (0.84, 0.18, 0.18, 0.08 + 0.65 * intensity)
+            else:
+                color = (0.12, 0.30, 0.72, 0.08 + 0.65 * intensity)
+            lw = 0.3 + 2.5 * intensity
+            ax.plot([x_in, x_hid], [y_inputs[i], y_hiddens[j]], color=color, linewidth=lw, zorder=1, solid_capstyle="round")
 
-    # Draw W2 connections
+    # ── Draw W2 connections with weight labels ──
     for j in range(hidden_dim):
         for k in range(output_dim):
             w_val = W2[j, k]
             intensity = min(abs(w_val) / w2_max, 1.0)
-            color = (0.8, 0.2, 0.2, 0.2 + 0.7 * intensity) if w_val < 0 else (0.2, 0.2, 0.8, 0.2 + 0.7 * intensity)
-            lw = 1.0 + 3.0 * intensity
-            ax.plot([x_hid, x_out], [y_hiddens[j], y_outputs[k]], color=color, linewidth=lw, zorder=1)
-            # label W2 values (fewer connections so we can show them all)
-            mid_x = (x_hid + x_out) / 2 + 0.1
+            if w_val < 0:
+                color = (0.84, 0.18, 0.18, 0.15 + 0.7 * intensity)
+            else:
+                color = (0.12, 0.30, 0.72, 0.15 + 0.7 * intensity)
+            lw = 0.8 + 3.2 * intensity
+            ax.plot([x_hid, x_out], [y_hiddens[j], y_outputs[k]], color=color, linewidth=lw, zorder=1, solid_capstyle="round")
+            # W2 weight label badge
+            mid_x = (x_hid + x_out) / 2 + 0.15
             mid_y = (y_hiddens[j] + y_outputs[k]) / 2
-            ax.text(mid_x, mid_y, f"{w_val:.2f}", fontsize=6, color="black", ha="center", va="center",
-                    bbox=dict(boxstyle="round,pad=0.1", facecolor="white", edgecolor="none", alpha=0.8), zorder=5)
+            badge_color = "#FFEBEE" if w_val < 0 else "#E3F2FD"
+            badge_edge = "#EF9A9A" if w_val < 0 else "#90CAF9"
+            ax.text(mid_x, mid_y, f"{w_val:+.2f}", fontsize=7, color="#333", ha="center", va="center", weight="bold",
+                    bbox=dict(boxstyle="round,pad=0.15", facecolor=badge_color, edgecolor=badge_edge, lw=0.8, alpha=0.95), zorder=5)
 
-    # Draw input nodes
-    node_r = 0.3
+    # ── Draw input nodes (with shadow) ──
+    node_r = 0.32
     for i in range(input_dim):
-        circle = patches.Circle((x_in, y_inputs[i]), node_r, edgecolor="#1565C0", facecolor="#BBDEFB", lw=2, zorder=3)
+        # Shadow
+        shadow = patches.Circle((x_in + 0.04, y_inputs[i] - 0.04), node_r, facecolor="#00000015", edgecolor="none", zorder=2)
+        ax.add_patch(shadow)
+        # Node
+        circle = patches.Circle((x_in, y_inputs[i]), node_r, edgecolor="#0D47A1", facecolor="#E3F2FD", lw=2.5, zorder=3)
         ax.add_patch(circle)
-        ax.text(x_in, y_inputs[i], feature_names[i][:6], ha="center", va="center", weight="bold", fontsize=7, zorder=4)
+        ax.text(x_in, y_inputs[i], feature_names[i][:7], ha="center", va="center", weight="bold", fontsize=7.5, color="#0D47A1", zorder=4)
 
-    # Draw hidden nodes with bias values
+    # ── Draw hidden nodes with bias values ──
     for j in range(hidden_dim):
-        circle = patches.Circle((x_hid, y_hiddens[j]), node_r, edgecolor="#2E7D32", facecolor="#C8E6C9", lw=2, zorder=3)
+        shadow = patches.Circle((x_hid + 0.04, y_hiddens[j] - 0.04), node_r, facecolor="#00000015", edgecolor="none", zorder=2)
+        ax.add_patch(shadow)
+        circle = patches.Circle((x_hid, y_hiddens[j]), node_r, edgecolor="#1B5E20", facecolor="#E8F5E9", lw=2.5, zorder=3)
         ax.add_patch(circle)
-        ax.text(x_hid, y_hiddens[j] + 0.05, f"H{j+1}", ha="center", va="center", weight="bold", fontsize=8, zorder=4)
-        ax.text(x_hid, y_hiddens[j] - 0.12, f"b={b1[j]:.2f}", ha="center", va="center", fontsize=5, color="dimgray", zorder=4)
+        ax.text(x_hid, y_hiddens[j] + 0.06, f"H{j+1}", ha="center", va="center", weight="bold", fontsize=9, color="#1B5E20", zorder=4)
+        ax.text(x_hid, y_hiddens[j] - 0.11, f"b={b1[j]:+.2f}", ha="center", va="center", fontsize=5.5, color="#555", zorder=4,
+                fontstyle="italic")
 
-    # Draw output node
+    # ── Draw output node ──
     for k in range(output_dim):
-        circle = patches.Circle((x_out, y_outputs[k]), node_r, edgecolor="#C62828", facecolor="#FFCDD2", lw=2, zorder=3)
+        shadow = patches.Circle((x_out + 0.04, y_outputs[k] - 0.04), node_r * 1.15, facecolor="#00000015", edgecolor="none", zorder=2)
+        ax.add_patch(shadow)
+        circle = patches.Circle((x_out, y_outputs[k]), node_r * 1.15, edgecolor="#B71C1C", facecolor="#FFEBEE", lw=3, zorder=3)
         ax.add_patch(circle)
-        ax.text(x_out, y_outputs[k] + 0.05, target_name, ha="center", va="center", weight="bold", fontsize=8, zorder=4)
-        ax.text(x_out, y_outputs[k] - 0.12, f"b={b2[k]:.3f}", ha="center", va="center", fontsize=5, color="dimgray", zorder=4)
+        ax.text(x_out, y_outputs[k] + 0.08, target_name, ha="center", va="center", weight="bold", fontsize=10, color="#B71C1C", zorder=4)
+        ax.text(x_out, y_outputs[k] - 0.14, f"b={b2[k]:+.3f}", ha="center", va="center", fontsize=6, color="#555", zorder=4,
+                fontstyle="italic")
 
-    # Layer labels
-    ax.text(x_in, max(y_inputs) + 1.0, f"Input Layer\n({input_dim} features)", ha="center", va="center", weight="bold", color="#1565C0", fontsize=13)
-    ax.text(x_hid, max(y_hiddens) + 1.0, f"Hidden Layer\n({hidden_dim} neurons, Sigmoid)", ha="center", va="center", weight="bold", color="#2E7D32", fontsize=13)
-    ax.text(x_out, max(y_hiddens) + 1.0, f"Output Layer\n({output_dim} neuron, Linear)", ha="center", va="center", weight="bold", color="#C62828", fontsize=13)
+    # ── Layer header labels (rounded rectangles) ──
+    header_y = max(max(y_inputs), max(y_hiddens)) + 1.2
+    for (x, label, clr) in [
+        (x_in, f"Input Layer\n{input_dim} features", "#1565C0"),
+        (x_hid, f"Hidden Layer\n{hidden_dim} neurons · Sigmoid", "#2E7D32"),
+        (x_out, f"Output Layer\n{output_dim} neuron · Linear", "#C62828"),
+    ]:
+        header_box = patches.FancyBboxPatch((x - 1.0, header_y - 0.35), 2.0, 0.7,
+            boxstyle="round,pad=0.12", facecolor=clr, edgecolor=clr, alpha=0.85, lw=0, zorder=3)
+        ax.add_patch(header_box)
+        ax.text(x, header_y, label, ha="center", va="center", weight="bold", color="white", fontsize=10, zorder=4)
 
-    # Weight matrix shape annotations
-    ax.text((x_in + x_hid) / 2, -0.3, f"W1: {input_dim}×{hidden_dim} = {input_dim*hidden_dim} weights", ha="center", fontsize=10, style="italic", color="dimgray")
-    ax.text((x_hid + x_out) / 2, -0.3, f"W2: {hidden_dim}×{output_dim} = {hidden_dim*output_dim} weights", ha="center", fontsize=10, style="italic", color="dimgray")
+    # ── Weight matrix shape annotations ──
+    annot_y = min(min(y_inputs), min(y_hiddens)) - 0.8
+    for (x, text) in [
+        ((x_in + x_hid) / 2, f"W₁: {input_dim}×{hidden_dim} = {input_dim*hidden_dim} weights"),
+        ((x_hid + x_out) / 2, f"W₂: {hidden_dim}×{output_dim} = {hidden_dim*output_dim} weights"),
+    ]:
+        ax.text(x, annot_y, text, ha="center", fontsize=10, color="#555", fontstyle="italic",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#DDD", lw=1, alpha=0.9))
 
-    # Legend for line coloring
-    ax.plot([], [], color=(0.2, 0.2, 0.8, 0.8), linewidth=2, label="Positive weight")
-    ax.plot([], [], color=(0.8, 0.2, 0.2, 0.8), linewidth=2, label="Negative weight")
-    ax.text(0.5, -0.7, "Line thickness ∝ |weight magnitude|   •   Blue = positive   •   Red = negative", ha="left", fontsize=9, style="italic", color="gray")
+    # ── Professional legend box ──
+    legend_y = annot_y - 0.8
+    legend_box = patches.FancyBboxPatch((1.3, legend_y - 0.25), 8.4, 0.5,
+        boxstyle="round,pad=0.1", facecolor="white", edgecolor="#CCC", lw=1, alpha=0.95, zorder=3)
+    ax.add_patch(legend_box)
+    # Blue line sample
+    ax.plot([1.6, 2.1], [legend_y, legend_y], color=(0.12, 0.30, 0.72, 0.8), linewidth=2.5, zorder=4)
+    ax.text(2.2, legend_y, "Positive weight", fontsize=9, va="center", color="#333", zorder=4)
+    # Red line sample
+    ax.plot([4.0, 4.5], [legend_y, legend_y], color=(0.84, 0.18, 0.18, 0.8), linewidth=2.5, zorder=4)
+    ax.text(4.6, legend_y, "Negative weight", fontsize=9, va="center", color="#333", zorder=4)
+    # Thickness note
+    ax.text(6.8, legend_y, "Line thickness ∝ |weight magnitude|", fontsize=9, va="center", color="#777", fontstyle="italic", zorder=4)
 
-    plt.title("SBOA-Optimized MLP Architecture — Auto-MPG Dataset (Real Trained Weights)", fontsize=15, weight="bold", pad=20)
-    ax.set_xlim(0.5, 9.5)
-    ax.set_ylim(-1.2, max(max(y_inputs), max(y_hiddens)) + 1.5)
+    # ── Title ──
+    fig.suptitle("SBOA-Optimized MLP Architecture — Auto-MPG Dataset", fontsize=17, weight="bold", color="#1A1A2E", y=0.97)
+    ax.set_title("Trained with real weights and biases from Secretary Bird Optimization Algorithm", fontsize=11, color="#666", style="italic", pad=15)
 
-    plt.savefig(os.path.join(VIS_DIR, "mlp_real_weights.png"), dpi=300, bbox_inches="tight")
+    ax.set_xlim(0.8, 10.2)
+    ax.set_ylim(legend_y - 0.6, header_y + 0.8)
+
+    plt.savefig(os.path.join(VIS_DIR, "mlp_real_weights.png"), dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close()
     print("  ✅ mlp_real_weights.png")
 
