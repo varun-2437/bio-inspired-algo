@@ -375,3 +375,204 @@ def GTO_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
     return {"weights": weights, "biases": biases, "curve": result["curve"],
             "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
 
+
+def GWO(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness):
+    """Grey Wolf Optimizer (GWO) for MLP."""
+    Alpha_pos = np.zeros(dimension)
+    Alpha_score = float("inf")
+    Beta_pos = np.zeros(dimension)
+    Beta_score = float("inf")
+    Delta_pos = np.zeros(dimension)
+    Delta_score = float("inf")
+
+    Positions = np.random.uniform(lowerbound, upperbound, size=(SearchAgents, dimension))
+    Convergence_curve = np.zeros(Max_iterations)
+
+    for l in range(Max_iterations):
+        for i in range(SearchAgents):
+            Positions[i, :] = np.clip(Positions[i, :], lowerbound, upperbound)
+            fit = fitness(Positions[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+
+            if fit < Alpha_score:
+                Alpha_score = fit
+                Alpha_pos = Positions[i, :].copy()
+            elif Alpha_score < fit < Beta_score:
+                Beta_score = fit
+                Beta_pos = Positions[i, :].copy()
+            elif fit > Alpha_score and fit > Beta_score and fit < Delta_score:
+                Delta_score = fit
+                Delta_pos = Positions[i, :].copy()
+
+        a = 2.0 - (l * (2.0 / Max_iterations))
+
+        for i in range(SearchAgents):
+            for j in range(dimension):
+                r1, r2 = np.random.rand(), np.random.rand()
+                A1 = 2 * a * r1 - a
+                C1 = 2 * r2
+                D_alpha = abs(C1 * Alpha_pos[j] - Positions[i, j])
+                X1 = Alpha_pos[j] - A1 * D_alpha
+
+                r1, r2 = np.random.rand(), np.random.rand()
+                A2 = 2 * a * r1 - a
+                C2 = 2 * r2
+                D_beta = abs(C2 * Beta_pos[j] - Positions[i, j])
+                X2 = Beta_pos[j] - A2 * D_beta
+
+                r1, r2 = np.random.rand(), np.random.rand()
+                A3 = 2 * a * r1 - a
+                C3 = 2 * r2
+                D_delta = abs(C3 * Delta_pos[j] - Positions[i, j])
+                X3 = Delta_pos[j] - A3 * D_delta
+
+                Positions[i, j] = (X1 + X2 + X3) / 3.0
+
+        Convergence_curve[l] = Alpha_score
+        print(f"Iteration {l+1}: Best Cost = {Convergence_curve[l]:.6f}")
+
+    return {"Best_pos": Alpha_pos, "Best_score": Alpha_score, "curve": Convergence_curve}
+
+
+def GWO_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = GWO(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+
+def MFO(X_train, Y_train, input_dim, hidden_dim, output_dim,
+        SearchAgents, Max_iterations, lowerbound, upperbound, dimension, fitness):
+    """Moth-Flame Optimization (MFO) for MLP."""
+    Moth_pos = np.random.uniform(lowerbound, upperbound, size=(SearchAgents, dimension))
+    Convergence_curve = np.zeros(Max_iterations)
+
+    previous_population = None
+    previous_fitness = None
+    best_flames = None
+    best_flame_fitness = None
+    Best_flame_score = float("inf")
+    Best_flame_pos = None
+
+    for Iteration in range(1, Max_iterations + 1):
+        Flame_no = int(round(SearchAgents - Iteration * ((SearchAgents - 1) / Max_iterations)))
+        Flame_no = max(1, Flame_no)
+
+        Moth_pos = np.clip(Moth_pos, lowerbound, upperbound)
+        Moth_fitness = np.zeros(SearchAgents)
+        for i in range(SearchAgents):
+            Moth_fitness[i] = fitness(Moth_pos[i, :], X_train, Y_train, input_dim, hidden_dim, output_dim)
+
+        if Iteration == 1:
+            sorted_indices = np.argsort(Moth_fitness)
+            sorted_population = Moth_pos[sorted_indices, :].copy()
+            fitness_sorted = Moth_fitness[sorted_indices].copy()
+            best_flames = sorted_population.copy()
+            best_flame_fitness = fitness_sorted.copy()
+        else:
+            double_population = np.vstack([previous_population, best_flames])
+            double_fitness = np.concatenate([previous_fitness, best_flame_fitness])
+            sorted_indices = np.argsort(double_fitness)
+            double_sorted_population = double_population[sorted_indices, :]
+
+            fitness_sorted = double_fitness[sorted_indices][:SearchAgents]
+            sorted_population = double_sorted_population[:SearchAgents, :]
+            best_flames = sorted_population.copy()
+            best_flame_fitness = fitness_sorted.copy()
+
+        Best_flame_score = fitness_sorted[0]
+        Best_flame_pos = sorted_population[0, :].copy()
+
+        previous_population = Moth_pos.copy()
+        previous_fitness = Moth_fitness.copy()
+
+        a = -1.0 + Iteration * (-1.0 / Max_iterations)
+
+        for i in range(SearchAgents):
+            for j in range(dimension):
+                b = 1.0
+                t = (a - 1.0) * np.random.rand() + 1.0
+                if i < Flame_no:
+                    distance_to_flame = abs(sorted_population[i, j] - Moth_pos[i, j])
+                    Moth_pos[i, j] = distance_to_flame * np.exp(b * t) * np.cos(t * 2 * np.pi) + sorted_population[i, j]
+                else:
+                    distance_to_flame = abs(sorted_population[i, j] - Moth_pos[i, j])
+                    Moth_pos[i, j] = distance_to_flame * np.exp(b * t) * np.cos(t * 2 * np.pi) + sorted_population[Flame_no - 1, j]
+
+        Convergence_curve[Iteration - 1] = Best_flame_score
+        print(f"Iteration {Iteration}: Best Cost = {Convergence_curve[Iteration - 1]:.6f}")
+
+    return {"Best_pos": Best_flame_pos, "Best_score": Best_flame_score, "curve": Convergence_curve}
+
+
+def MFO_nn(X_train, Y_train, hidden_dim, SearchAgents, Max_iterations,
+           lowerbound=-1, upperbound=1):
+    X_train = np.array(X_train, dtype=float)
+    Y_train = np.array(Y_train, dtype=float)
+    max_data_X = X_train.max(axis=0)
+    min_data_X = X_train.min(axis=0)
+    Xn = (X_train - min_data_X) / (max_data_X - min_data_X + 1e-12)
+
+    max_data_y = Y_train.max(axis=0)
+    min_data_y = Y_train.min(axis=0)
+    Yn = (Y_train - min_data_y) / (max_data_y - min_data_y + 1e-12)
+
+    input_dim = Xn.shape[1]
+    output_dim = Yn.shape[1] if Yn.ndim > 1 else 1
+    if Yn.ndim == 1:
+        Yn = Yn.reshape(-1, 1)
+
+    num_params = input_dim * hidden_dim + hidden_dim + hidden_dim * output_dim + output_dim
+
+    result = MFO(Xn, Yn, input_dim, hidden_dim, output_dim,
+                 SearchAgents, Max_iterations, lowerbound, upperbound, num_params, fitness_function)
+
+    best_params = result["Best_pos"]
+    idx = 0
+    W1 = best_params[idx: idx + input_dim * hidden_dim].reshape((input_dim, hidden_dim))
+    idx += input_dim * hidden_dim
+    b1 = best_params[idx: idx + hidden_dim]
+    idx += hidden_dim
+    W2 = best_params[idx: idx + hidden_dim * output_dim].reshape((hidden_dim, output_dim))
+    idx += hidden_dim * output_dim
+    b2 = best_params[idx: idx + output_dim]
+
+    weights = {"W1": W1, "W2": W2}
+    biases = {"b1": b1, "b2": b2}
+
+    return {"weights": weights, "biases": biases, "curve": result["curve"],
+            "normalization_X": (min_data_X, max_data_X), "normalization_y": (min_data_y, max_data_y)}
+
+

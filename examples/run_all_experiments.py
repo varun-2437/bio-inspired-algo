@@ -6,14 +6,16 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-from mlp_sboa.optimizers import SBOA_nn, ABC_nn, GTO_nn
+from mlp_sboa.optimizers import SBOA_nn, ABC_nn, GTO_nn, GWO_nn, MFO_nn
 from mlp_sboa.model import predict
 from mlp_sboa.metrics import rmse, mae
 
 OPTIMIZERS = {
     "SBOA": SBOA_nn,
     "ABC": ABC_nn,
-    "GTO": GTO_nn
+    "GTO": GTO_nn,
+    "GWO": GWO_nn,
+    "MFO": MFO_nn
 }
 
 DATASETS_CONFIG = {
@@ -236,7 +238,7 @@ def run_experiment(name, opt_name, X, y, search_agents, max_iterations, repo_roo
 
 def main():
     parser = argparse.ArgumentParser(description="Run Bio-inspired MLP experiments across all datasets.")
-    parser.add_argument("--models", nargs="+", default=["SBOA", "ABC", "GTO"], choices=["SBOA", "ABC", "GTO"], help="Models to evaluate")
+    parser.add_argument("--models", nargs="+", default=["SBOA", "ABC", "GTO", "GWO", "MFO"], choices=list(OPTIMIZERS.keys()), help="Models to evaluate")
     parser.add_argument("--agents", type=int, default=30, help="Number of search agents (population size)")
     parser.add_argument("--iterations", type=int, default=50, help="Number of maximum optimizer iterations")
     args = parser.parse_args()
